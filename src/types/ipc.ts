@@ -1,0 +1,1 @@
+// IPC type definition for Tauri commands
