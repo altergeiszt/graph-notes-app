@@ -33,7 +33,7 @@ Goal: a running Tauri 2.0 app with Rust backend and React frontend, no features 
 Goal: open a vault directory, scan .md files, store notes in SurrealDB, display note list.
 
 ### 1.1 SurrealDB Setup `[BE]`
-- [ ] Add `surrealdb` crate with `kv-surrealkv` feature to `Cargo.toml`
+- [ x] Add `surrealdb` crate with `kv-surrealkv` feature to `Cargo.toml`
 - [ ] Resolve app data path (use `tauri::Manager::path().app_data_dir()`)
 - [ ] Initialize DB connection on app startup: `Surreal::new::<SurrealKv>(path)`, use_ns/use_db
 - [ ] Define schema via SurrealQL `DEFINE TABLE` / `DEFINE FIELD` / `DEFINE INDEX` statements for `note`, `tag`, `dangling_node`, `links_to`, `tagged_with`
