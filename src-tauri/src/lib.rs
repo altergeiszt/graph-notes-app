@@ -1,4 +1,6 @@
+mod commands;
 mod db;
+mod engine;
 mod state;
 
 use state::AppState;
@@ -44,7 +46,7 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_shell::init())
-        .invoke_handler(tauri::generate_handler![greet])
+        .invoke_handler(tauri::generate_handler![greet, commands::vault::vault_open])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

@@ -42,12 +42,12 @@ Goal: open a vault directory, scan .md files, store notes in SurrealDB, display 
 
 ### 1.2 Vault Open `[BOTH]`
 
-- [ ] `[FE]` "Open Vault" button calls `tauri-plugin-dialog` folder picker → passes path to backend
+- [x] `[FE]` "Open Vault" button calls `tauri-plugin-dialog` folder picker → passes path to backend
 - [ ] `[BE]` Implement `vault_open` Tauri command: accepts path, stores in `AppState`, triggers indexer
 - [ ] `[BE]` Implement recursive `.md` file scanner using `tokio::fs::read_dir`
 - [ ] `[BE]` Persist last-opened vault path to `tauri-plugin-store` so it reopens on launch
 - [ ] `[BE]` Emit `vault_index_progress` events (percent complete) and `vault_index_done` to frontend
-- [ ] `[FE]` Listen for progress events and show a loading indicator
+- [x] `[FE]` Listen for progress events and show a loading indicator
 
 ### 1.3 Frontmatter and Basic Parsing `[BE]`
 
