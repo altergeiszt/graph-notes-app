@@ -14,12 +14,13 @@ export interface NoteSummary {
   id: string;
   path: string;
   title: string;
-  createdAt: string; // ISO 8601
   updatedAt: string;
+  tags: string[];
 }
 
 export interface NoteRecord extends NoteSummary {
   content: string;
+  createdAt: string;
   frontmatter: Record<string, unknown>;
 }
 
