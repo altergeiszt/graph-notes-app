@@ -39,6 +39,5 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     commands::graph::graph_query_unlinked_mentions,])
     .run(tauri::generate_context!())?;
 
-     Ok(())
-
+    Ok(())
 }
