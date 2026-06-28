@@ -25,36 +25,58 @@ export function BacklinksPanel({ note, onNavigate }: Props) {
   }, [note.id]);
 
   return (
-    <div className="backlinks-panel">
-      <section>
-        <h3>Linked Mentions ({backlinks.length})</h3>
-        {backlinks.map((bl) => (
-          <div
-            key={bl.source_path}
-            onClick={() => onNavigate(bl.source_path)}
-            className="backlink-entry"
-            style={{ cursor: 'pointer' }}
-          >
-            <strong>{bl.source_title}</strong>
-            <p className="snippet">{bl.snippet}</p>
-          </div>
-        ))}
-      </section>
+    <aside className="backlinks-panel">
+      <div className="backlinks-panel-header">backlinks</div>
 
-      <section>
-        <h3>Unlinked Mentions ({unlinked.length})</h3>
-        {unlinked.map((ul) => (
-          <div
-            key={ul.source_path}
-            onClick={() => onNavigate(ul.source_path)}
-            className="backlink-entry unlinked"
-            style={{ cursor: 'pointer' }}
-          >
-            <strong>{ul.source_title}</strong>
-            <p className="snippet">{ul.snippet}</p>
-          </div>
-        ))}
-      </section>
-    </div>
+      <div className="backlinks-scroll">
+        <div className="backlinks-section">
+          <p className="backlinks-heading">
+            linked &mdash; {backlinks.length}
+          </p>
+          {backlinks.length === 0 ? (
+            <p className="backlinks-empty">none</p>
+          ) : (
+            backlinks.map((bl) => (
+              <div
+                key={bl.source_path}
+                className="backlinks-entry"
+                onClick={() => onNavigate(bl.source_path)}
+              >
+                <span className="backlinks-entry-title">
+                  {bl.source_title}
+                </span>
+                {bl.snippet && (
+                  <p className="backlinks-snippet">{bl.snippet}</p>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+
+        <div className="backlinks-section">
+          <p className="backlinks-heading">
+            unlinked &mdash; {unlinked.length}
+          </p>
+          {unlinked.length === 0 ? (
+            <p className="backlinks-empty">none</p>
+          ) : (
+            unlinked.map((ul) => (
+              <div
+                key={ul.source_path}
+                className="backlinks-entry"
+                onClick={() => onNavigate(ul.source_path)}
+              >
+                <span className="backlinks-entry-title">
+                  {ul.source_title}
+                </span>
+                {ul.snippet && (
+                  <p className="backlinks-snippet">{ul.snippet}</p>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    </aside>
   );
 }
