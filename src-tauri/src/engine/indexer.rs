@@ -11,7 +11,7 @@ pub fn note_id_from_path(vault_root: &Path, note_path: &Path) -> String {
         .expect("Note path must be under the vault root");
     let normalized = relative.to_string_lossy().replace('\\', "/");
     let hash = Sha256::digest(normalized.as_bytes());
-    format!("note:{}", hex::encode(&hash[..16]))
+    format!("note:{}", hex::encode(&hash[..8]))
 }
 
 pub struct IndexerService {
@@ -46,7 +46,7 @@ pub async fn resolve_and_upsert_links(
                 // Upsert dangling_node 
                 let dn: Vec<serde_json::Value> = db.query(
                     "INSERT INTO dangling_node { name: $name } ON DUPLICATE KEY IGNORE"
-                ).bind(("name", &wl.target)).await?.take(0)?;
+                ).bind(("name", wl.target.clone())).await?.take(0)?;
                 let dn_id = dn.first() 
                     .and_then(|v| v.get("id")) 
                     .and_then(|v| v.as_str()) 
@@ -63,10 +63,10 @@ pub async fn resolve_and_upsert_links(
             }" 
         ) 
         .bind(("src", source_id)) 
-        .bind(("tgt", &format!("{out_table}:{out_id}"))) 
-        .bind(("alias", &wl.alias)) 
-        .bind(("section", &wl.section_anchor)) 
-        .bind(("block", &wl.block_id)) 
+        .bind(("tgt", format!("{out_table}:{out_id}")))
+        .bind(("alias", wl.alias.clone()))
+        .bind(("section", wl.section_anchor.clone()))
+        .bind(("block", wl.block_id.clone()))
         .bind(("line", wl.line_number)) 
         .await?; 
     } 
@@ -171,4 +171,27 @@ impl From<IndexerError> for String {
     fn from(e: IndexerError) -> Self {
         e.to_string()
     }
+}
+
+#[test]
+fn test_note_id_is_stable_for_same_path() {
+    let root = Path::new("/vault");
+    let note = Path::new("/vault/notes/my-note.md");
+    let id1 = note_id_from_path(root, note);
+    let id2 = note_id_from_path(root, note);
+    assert_eq!(id1, id2);
+}
+
+#[test]
+fn test_note_id_differs_for_different_paths() {
+    let root = Path::new("/vault");
+    let a = note_id_from_path(root, Path::new("/vault/a.md"));
+    let b = note_id_from_path(root, Path::new("/vault/b.md"));
+    assert_ne!(a, b);
+}
+
+#[test]
+fn test_note_id_starts_with_note_prefix() {
+    let id = note_id_from_path(Path::new("/vault"), Path::new("/vault/x.md"));
+    assert!(id.starts_with("note:"));
 }

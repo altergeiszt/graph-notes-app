@@ -281,3 +281,20 @@ fn sanitize_filename(title: &str) -> String {
         .trim()
         .to_string()
 }
+
+#[test]
+fn test_sanitize_removes_forbidden_characters() {
+    assert_eq!(sanitize_filename("My: Note? <Bad>"), "My Note Bad");
+}
+
+#[test]
+fn test_sanitize_all_special_chars_returns_untitled_fallback() {
+    // Edge case from §3.5.6: sanitize returns empty → caller falls back to "Untitled"
+    let result = sanitize_filename("/:*?\"<>|\\");
+    assert!(result.is_empty()); // caller handles the empty case
+}
+
+#[test]
+fn test_sanitize_preserves_spaces_and_unicode() {
+    assert_eq!(sanitize_filename("Café Notes"), "Café Notes");
+}

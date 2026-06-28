@@ -7,8 +7,12 @@ use crate::db::DbHandle;
 use crate::engine::parser::ParsedNote;
 use crate::types::NoteSummary;
 
+fn split_id(id: &str) -> (&str, &str) {
+    id.split_once(':').expect("ID must be table:key")
+}
+
 fn rid(id: &str) -> RecordId {
-    let (table, key) = id.split_once(':').expect("ID must be table:key");
+    let (table, key) = split_id(id);
     RecordId::new(table, key)
 }
 
@@ -20,34 +24,29 @@ pub async fn upsert(
     parsed: &ParsedNote,
     content: &str,
 ) -> Result<NoteSummary, String> {
-    let record_id = rid(id);
+    let (table, key) = split_id(id);
     let path_str = path.to_string_lossy().to_string();
 
-    // INSERT IGNORE creates the record (with created_at) only when it doesn't exist.
-    // The following UPDATE refreshes all mutable fields without touching created_at.
+    // Use type::thing to construct the record ID inside SurrealQL so the key is
+    // treated as a plain string regardless of how the Rust client serializes RecordId.
     db.query(
-        "INSERT IGNORE INTO note {
-           id: $rid,
-           path: $path,
-           title: $title,
-           content: $content,
-           frontmatter: $frontmatter,
-           created_at: time::now(),
-           updated_at: time::now()
-         };
-         UPDATE $rid SET
+        "UPSERT type::record($table, $key) SET
            path = $path,
            title = $title,
            content = $content,
            frontmatter = $frontmatter,
+           created_at = IF created_at THEN created_at ELSE time::now() END,
            updated_at = time::now();",
     )
-    .bind(("rid", record_id))
+    .bind(("table", table.to_string()))
+    .bind(("key", key.to_string()))
     .bind(("path", path_str))
     .bind(("title", parsed.title.clone()))
     .bind(("content", content.to_string()))
     .bind(("frontmatter", serde_json::json!(parsed.frontmatter)))
     .await
+    .map_err(|e| e.to_string())?
+    .take::<Vec<serde_json::Value>>(0)
     .map_err(|e| e.to_string())?;
 
     get_summary(db, id).await
@@ -99,15 +98,16 @@ async fn insert_tag(
 
 /// Fetch a NoteSummary by record ID string (e.g. "note:abc123").
 pub async fn get_summary(db: &Arc<DbHandle>, id: &str) -> Result<NoteSummary, String> {
-    let record_id = rid(id);
+    let (table, key) = split_id(id);
 
     let mut resp = db
         .query(
             "SELECT id, path, title, updated_at,
                array::flatten(->tagged_with->tag.slug) AS tags
-             FROM $rid LIMIT 1",
+             FROM type::record($table, $key) LIMIT 1",
         )
-        .bind(("rid", record_id))
+        .bind(("table", table.to_string()))
+        .bind(("key", key.to_string()))
         .await
         .map_err(|e| e.to_string())?;
 

@@ -1,8 +1,8 @@
 mod commands;
-mod db;
-mod engine;
+pub mod db;
+pub mod engine;
 mod state;
-mod types;
+pub mod types;
 
 use state::AppState;
 use std::error::Error;

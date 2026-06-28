@@ -2,7 +2,6 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use notify::{Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 use tokio::sync::{mpsc, RwLock};
-use tauri::Emitter;
 use crate::db::DbHandle;
 use crate::engine::indexer::IndexerService;
 

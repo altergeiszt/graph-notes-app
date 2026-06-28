@@ -12,7 +12,7 @@ pub async fn graph_query_backlinks(
             "SELECT in.path AS source_path, in.title AS source_title, in.content AS source_content
              FROM links_to WHERE out.path = $path",
         )
-        .bind(("path", &path))
+        .bind(("path", path.clone()))
         .await
         .map_err(|e| e.to_string())?
         .take(0)
@@ -45,7 +45,7 @@ pub async fn graph_query_forward_links(
                     array::flatten(out->tagged_with->tag.slug) AS tags
              FROM links_to WHERE in.path = $path AND out IS note",
         )
-        .bind(("path", &path))
+        .bind(("path", path))
         .await
         .map_err(|e| e.to_string())?;
 
@@ -69,8 +69,8 @@ pub async fn graph_query_unlinked_mentions(
                AND string::contains(string::lowercase(content), string::lowercase($title))
                AND id NOT IN (SELECT in FROM links_to WHERE out.path = $path)",
         )
-        .bind(("path", &path))
-        .bind(("title", &title))
+        .bind(("path", path.clone()))
+        .bind(("title", title.clone()))
         .await
         .map_err(|e| e.to_string())?
         .take(0)
