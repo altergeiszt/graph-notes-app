@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 
+use tauri::Emitter;
 use crate::engine::indexer::index_vault;
 use crate::state::AppState;
 use crate::types::VaultInfo;
@@ -28,7 +29,7 @@ pub async fn vault_open(
     let root = vault_root.clone();
     tokio::spawn(async move {
         if let Err(e) = index_vault(root, db, app_handle.clone()).await {
-            app_handle.emit("vault_index_error", e).ok();
+            app_handle.emit("vault_index_error", e.to_string()).ok();
         }
     });
 

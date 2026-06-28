@@ -1,11 +1,11 @@
 // IPC type definitions for Tauri commands and events.
-// Keep in sync with the Rust structs in src-tauri/src/.
+// Keep in sync with Rust structs in src-tauri/src/types.rs (snake_case, no rename).
 
 // ─── Vault ───────────────────────────────────────────────────────────────────
 
 export interface VaultInfo {
   path: string;
-  noteCount: number;
+  note_count: number;
 }
 
 // ─── Notes ───────────────────────────────────────────────────────────────────
@@ -14,14 +14,18 @@ export interface NoteSummary {
   id: string;
   path: string;
   title: string;
-  updatedAt: string;
+  updated_at: string;
   tags: string[];
 }
 
-export interface NoteRecord extends NoteSummary {
+export interface NoteRecord {
+  id: string;
+  path: string;
+  title: string;
   content: string;
-  createdAt: string;
   frontmatter: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
 }
 
 // ─── Tags ────────────────────────────────────────────────────────────────────
@@ -53,15 +57,14 @@ export interface GraphEdge {
 export interface GraphData {
   nodes: GraphNode[];
   edges: GraphEdge[];
-  danglingNodes: DanglingNode[];
+  dangling_nodes: DanglingNode[];
 }
 
 // ─── Backlinks ───────────────────────────────────────────────────────────────
 
 export interface BacklinkEntry {
-  id: string;
-  path: string;
-  title: string;
+  source_path: string;
+  source_title: string;
   snippet: string;
 }
 
@@ -88,7 +91,7 @@ export interface IndexProgressPayload {
 }
 
 export interface IndexDonePayload {
-  noteCount: number;
+  note_count: number;
 }
 
 export interface LlmTokenPayload {
@@ -99,6 +102,6 @@ export interface LlmDonePayload {
   citations: string[];
 }
 
-export interface RefactorDonePayload {
-  updatedCount: number;
+export interface RefactorResult {
+  updated_count: number;
 }
