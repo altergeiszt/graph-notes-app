@@ -1,4 +1,4 @@
-use notify::(Watcher, RecursiveMode, RecommendedWatcher, Event, EventKind);
+use notify::{Watcher, RecursiveMode, RecommendedWatcher, Event, EventKind, Config};
 use tokio::sync::mpsc;
 
 pub async fn start(
@@ -6,7 +6,7 @@ pub async fn start(
     vault_root: &PathBuf,
     state: tauri::State<'_, AppState>,
 ) -> Result<(), notify::Error> {
-    let (tx, mut rx) = mpsc::channel::notify::Result<Event>(32);
+    let (tx, mut rx) = mpsc::channel::<Result<Event, notify::Error>>(32);
     let app_handle = app.clone();
     let db = state.db.clone();
     let root = vault_root.clone();
