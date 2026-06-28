@@ -5,13 +5,17 @@ use tauri::Emitter;
 use crate::db::{self, DbHandle};
 use crate::engine::parser::{parse_note, extract_wikilinks, WikilinkMatch};
 
-pub fn note_id_from_path(vault_root: &Path, note_path: &Path) -> String {
+pub fn note_id_from_path(vault_root: &Path, note_path: &Path) -> Result<String, String> {
     let relative = note_path
         .strip_prefix(vault_root)
-        .expect("Note path must be under the vault root");
+        .map_err(|_| format!(
+            "Path '{}' is not under vault root '{}'",
+            note_path.display(),
+            vault_root.display()
+        ))?;
     let normalized = relative.to_string_lossy().replace('\\', "/");
     let hash = Sha256::digest(normalized.as_bytes());
-    format!("note:{}", hex::encode(&hash[..16]))
+    Ok(format!("note:{}", hex::encode(&hash[..16])))
 }
 
 pub struct IndexerService {
@@ -40,19 +44,23 @@ pub async fn resolve_and_upsert_links(
         .await?; 
      for wl in wikilinks { 
         let target_id = resolve_target(db, &wl.target).await?; 
-        let (out_table, out_id) = match target_id { 
+        let (out_table, out_id) = match target_id {
             Some(id) => ("note", id),
-                       None => { 
-                // Upsert dangling_node 
+            None => {
+                // Upsert dangling_node
                 let dn: Vec<serde_json::Value> = db.query(
                     "INSERT INTO dangling_node { name: $name } ON DUPLICATE KEY IGNORE"
-                ).bind(("name", &wl.target)).await?.take(0)?;
-                let dn_id = dn.first() 
-                    .and_then(|v| v.get("id")) 
-                    .and_then(|v| v.as_str()) 
-                    .unwrap_or_default().to_string(); 
-                ("dangling_node", dn_id) 
-            } 
+                ).bind(("name", wl.target.clone())).await?.take(0)?;
+                let dn_id = dn.first()
+                    .and_then(|v| v.get("id"))
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string());
+                match dn_id {
+                    Some(id) if !id.is_empty() => ("dangling_node", id),
+                    // INSERT returned no record; skip rather than create a broken edge
+                    _ => continue,
+                }
+            }
         }; 
          db.query( 
             "RELATE $src -> links_to -> $tgt CONTENT { 
@@ -63,10 +71,10 @@ pub async fn resolve_and_upsert_links(
             }" 
         ) 
         .bind(("src", source_id)) 
-        .bind(("tgt", &format!("{out_table}:{out_id}"))) 
-        .bind(("alias", &wl.alias)) 
-        .bind(("section", &wl.section_anchor)) 
-        .bind(("block", &wl.block_id)) 
+        .bind(("tgt", format!("{out_table}:{out_id}"))) 
+        .bind(("alias", wl.alias.clone())) 
+        .bind(("section", wl.section_anchor.clone())) 
+        .bind(("block", wl.block_id.clone())) 
         .bind(("line", wl.line_number)) 
         .await?; 
     } 
@@ -116,7 +124,8 @@ impl IndexerService {
             .map_err(|e| IndexerError::ReadFailed(path.to_path_buf(), e))?;
 
         let parsed = parse_note(path, &content);
-        let id = note_id_from_path(&self.vault_root, path);
+        let id = note_id_from_path(&self.vault_root, path)
+            .map_err(IndexerError::Unexpected)?;
 
         db::notes::upsert(&self.db, &id, path, &parsed, &content)
             .await

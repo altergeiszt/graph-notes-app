@@ -89,7 +89,7 @@ pub async fn note_save(
         .ok_or("No vault open")?;
 
     let parsed = parser::parse_note(&p, &content);
-    let id = note_id_from_path(&vault_root, &p);
+    let id = note_id_from_path(&vault_root, &p)?;
 
     let summary = db::notes::upsert(&state.db, &id, &p, &parsed, &content).await?;
     db::notes::upsert_tags(&state.db, &id, &parsed).await?;
@@ -143,7 +143,7 @@ pub async fn note_create(
     };
     indexer.index_one(&path).await.map_err(|e| e.to_string())?;
 
-    let id = note_id_from_path(&vault_root, &path);
+    let id = note_id_from_path(&vault_root, &path)?;
     db::notes::get_summary(&state.db, &id).await
 }
 
@@ -163,8 +163,9 @@ pub async fn note_delete(
         .ok_or("No vault open")?;
 
     let p = PathBuf::from(&path);
-    let id = note_id_from_path(&vault_root, &p);
-    let (table, key) = id.split_once(':').unwrap();
+    let id = note_id_from_path(&vault_root, &p)?;
+    let (table, key) = id.split_once(':')
+        .ok_or_else(|| format!("Malformed note ID: {id}"))?;
     let rid = RecordId::new(table, key);
 
     // Delete file first; ignore ENOENT (file may have been deleted externally).
@@ -249,8 +250,9 @@ pub async fn note_rename(
     }
 
     // Remove old DB record; index_one will create the new one.
-    let old_id = note_id_from_path(&vault_root, &old_p);
-    let (table, key) = old_id.split_once(':').unwrap();
+    let old_id = note_id_from_path(&vault_root, &old_p)?;
+    let (table, key) = old_id.split_once(':')
+        .ok_or_else(|| format!("Malformed note ID: {old_id}"))?;
     let old_rid = RecordId::new(table, key);
     state
         .db
@@ -266,7 +268,7 @@ pub async fn note_rename(
     };
     indexer.index_one(&new_p).await.map_err(|e| e.to_string())?;
 
-    let new_id = note_id_from_path(&vault_root, &new_p);
+    let new_id = note_id_from_path(&vault_root, &new_p)?;
     db::notes::get_summary(&state.db, &new_id).await
 }
 

@@ -6,18 +6,21 @@ use regex::Regex;
 pub struct ParsedNote {
     pub title: String,
     pub frontmatter: HashMap<String, serde_json::Value>,
+    #[allow(dead_code)] // used in future search/preview phase
     pub body: String,
     pub tags_inline: Vec<String>,
     pub tags_frontmatter: Vec<String>,
 }
-#[derive(Debug, Clone)] 
-pub struct WikilinkMatch { 
-    pub target: String,          // Note title or path (before #) 
-    pub alias: Option<String>,   // Display text after | 
-    pub section_anchor: Option<String>,  // After # (heading) 
-    pub block_id: Option<String>,        // After #^ (block ref) 
-    pub is_transclusion: bool,   // True if preceded by ! 
-    pub line_number: u32, 
+
+#[derive(Debug, Clone)]
+pub struct WikilinkMatch {
+    pub target: String,
+    pub alias: Option<String>,
+    pub section_anchor: Option<String>,
+    pub block_id: Option<String>,
+    #[allow(dead_code)] // used in future transclusion rendering phase
+    pub is_transclusion: bool,
+    pub line_number: u32,
 } 
 
 pub fn parse_note(path: &Path, content: &str) -> ParsedNote {

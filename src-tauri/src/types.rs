@@ -1,3 +1,7 @@
+// Structs below that are not yet constructed are intentionally forward-declared
+// for upcoming graph, search, and progress-reporting phases.
+#![allow(dead_code)]
+
 use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
 

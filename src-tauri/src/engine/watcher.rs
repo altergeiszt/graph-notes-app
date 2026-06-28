@@ -2,7 +2,6 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use notify::{Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 use tokio::sync::{mpsc, RwLock};
-use tauri::Emitter;
 use crate::db::DbHandle;
 use crate::engine::indexer::IndexerService;
 
@@ -43,7 +42,9 @@ pub async fn start(
                     }
                 }
                 EventKind::Remove(_) => {
-                    for path in &event.paths {
+                    for path in event.paths.iter().filter(|p| {
+                        p.extension().and_then(|e| e.to_str()) == Some("md")
+                    }) {
                         let path_str = path.to_string_lossy().to_string();
                         db_clone
                             .query("DELETE note WHERE path = $p")
