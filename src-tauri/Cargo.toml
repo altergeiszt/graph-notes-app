@@ -25,6 +25,7 @@ serde_json = "1"
 tauri-plugin-fs = "2"
 tauri-plugin-dialog = "2"
 tauri-plugin-shell = "2"
+tauri-plugin-store = "2"
 surrealdb = { version = "3.1.5", features = ["kv-mem", "kv-surrealkv"] }
 tokio = { version = "1.52.3", features = ["macros", "rt-multi-thread"] }
 notify = "8.2.0"
