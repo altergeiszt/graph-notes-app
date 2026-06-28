@@ -1,36 +1,46 @@
-import { useState, useEffect } from "react";
-import { invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
-import { open } from "@tauri-apps/plugin-dialog";
+import './App.css';
+import { useState, useEffect } from 'react';
+import { invoke } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
+import { open } from '@tauri-apps/plugin-dialog';
 import type {
   VaultInfo,
   IndexProgressPayload,
   IndexDonePayload,
-} from "./types/ipc";
-import { useTheme } from "./hooks/useTheme";
+  NoteSummary,
+  NoteRecord,
+} from './types/ipc';
+import { useTheme } from './hooks/useTheme';
+import { Sidebar } from './components/Sidebar';
+import { NoteArea } from './components/NoteArea';
+import { BacklinksPanel } from './components/BacklinksPanel';
 
-type AppStatus = "idle" | "indexing" | "ready";
+type AppStatus = 'idle' | 'indexing' | 'ready';
+type PaneMode = 'editor' | 'preview' | 'split';
 
 function App() {
-  const { isDark: _isDark } = useTheme();
-  const [status, setStatus] = useState<AppStatus>("idle");
+  const { isDark, toggleTheme } = useTheme();
+  const [status, setStatus] = useState<AppStatus>('idle');
   const [vault, setVault] = useState<VaultInfo | null>(null);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [notes, setNotes] = useState<NoteSummary[]>([]);
+  const [selectedNote, setSelectedNote] = useState<NoteRecord | null>(null);
+  const [paneMode, setPaneMode] = useState<PaneMode>('editor');
 
   useEffect(() => {
     const unlistenProgress = listen<IndexProgressPayload>(
-      "vault_index_progress",
+      'vault_index_progress',
       (event) => setProgress(event.payload.pct),
     );
 
     const unlistenDone = listen<IndexDonePayload>(
-      "vault_index_done",
+      'vault_index_done',
       (event) => {
         setVault((prev) =>
           prev ? { ...prev, note_count: event.payload.note_count } : null,
         );
-        setStatus("ready");
+        setStatus('ready');
       },
     );
 
@@ -40,65 +50,119 @@ function App() {
     };
   }, []);
 
+  useEffect(() => {
+    if (status === 'ready') {
+      invoke<NoteSummary[]>('note_list')
+        .then(setNotes)
+        .catch(console.error);
+    }
+  }, [status]);
+
   async function handleOpenVault() {
     const selected = await open({ directory: true, multiple: false });
     if (!selected || Array.isArray(selected)) return;
 
     setError(null);
-    setStatus("indexing");
+    setStatus('indexing');
     setProgress(0);
 
     try {
-      const info = await invoke<VaultInfo>("vault_open", { path: selected });
+      const info = await invoke<VaultInfo>('vault_open', { path: selected });
       setVault(info);
     } catch (err) {
       setError(String(err));
-      setStatus("idle");
+      setStatus('idle');
     }
   }
 
-  if (status === "idle") {
-    return (
-      <main className="flex flex-col items-center justify-center min-h-screen gap-6">
-        <h1 className="text-4xl font-bold tracking-tight">GraphNotes</h1>
-        <p className="text-sm opacity-60">
-          A local-first, graph-centric knowledge base
-        </p>
-        <button
-          onClick={handleOpenVault}
-          className="px-6 py-3 rounded-lg font-medium text-sm"
-        >
-          Open Vault
-        </button>
-        {error && (
-          <p className="text-sm text-red-500 max-w-sm text-center">{error}</p>
-        )}
-      </main>
-    );
+  async function handleSelectNote(path: string) {
+    try {
+      const note = await invoke<NoteRecord>('note_read', { path });
+      setSelectedNote(note);
+    } catch (err) {
+      console.error('Failed to read note:', err);
+    }
   }
 
-  if (status === "indexing") {
+  async function handleCreateNote() {
+    try {
+      const summary = await invoke<NoteSummary>('note_create', {
+        title: 'Untitled',
+      });
+      const refreshed = await invoke<NoteSummary[]>('note_list');
+      setNotes(refreshed);
+      await handleSelectNote(summary.path);
+    } catch (err) {
+      console.error('Failed to create note:', err);
+    }
+  }
+
+  if (status === 'idle') {
     return (
-      <main className="flex flex-col items-center justify-center min-h-screen gap-4">
-        <p className="text-sm font-medium">Indexing vault…</p>
-        <div className="w-64 h-1.5 rounded-full bg-black/10 overflow-hidden">
-          <div
-            className="h-full bg-blue-500 transition-all duration-200"
-            style={{ width: `${progress}%` }}
-          />
+      <main className="idle-screen">
+        <div className="idle-content">
+          <h1 className="app-name">GraphNotes</h1>
+          <p className="app-tagline">local-first knowledge graph</p>
+          <button className="open-vault-btn" onClick={handleOpenVault}>
+            open vault
+          </button>
+          {error && <p className="error-msg">{error}</p>}
         </div>
-        <p className="text-xs opacity-50">{progress}%</p>
       </main>
     );
   }
 
-  // ready — placeholder until Phase 1.4 adds the note list sidebar
+  if (status === 'indexing') {
+    return (
+      <main className="idle-screen">
+        <div className="idle-content">
+          <p className="indexing-label">indexing vault</p>
+          <div className="progress-track">
+            <div
+              className="progress-fill"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+          <p className="progress-pct">{progress}%</p>
+        </div>
+      </main>
+    );
+  }
+
   return (
-    <main className="flex flex-col items-center justify-center min-h-screen gap-3">
-      <p className="text-sm font-medium">Vault ready</p>
-      <p className="text-xs opacity-50 max-w-sm truncate">{vault?.path}</p>
-      <p className="text-xs opacity-50">{vault?.note_count} notes indexed</p>
-    </main>
+    <div className="workspace">
+      <Sidebar
+        vault={vault!}
+        notes={notes}
+        selectedNote={selectedNote}
+        onSelectNote={handleSelectNote}
+        onCreateNote={handleCreateNote}
+        onToggleTheme={toggleTheme}
+        isDark={isDark}
+      />
+
+      <div className="editor-area">
+        {selectedNote ? (
+          <NoteArea
+            note={selectedNote}
+            mode={paneMode}
+            isDark={isDark}
+            onModeChange={setPaneMode}
+          />
+        ) : (
+          <div className="empty-state">
+            select or create a note
+          </div>
+        )}
+      </div>
+
+      {selectedNote && (
+        <BacklinksPanel
+          note={selectedNote}
+          onNavigate={handleSelectNote}
+        />
+      )}
+    </div>
   );
 }
 
