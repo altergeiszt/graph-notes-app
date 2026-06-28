@@ -3,7 +3,7 @@ use std::sync::Arc;
 use std::path::{Path, PathBuf};
 use tauri::Emitter;
 use crate::db::{self, DbHandle};
-use crate::engine::parser::parse_note;
+use crate::engine::parser::{parse_note, extract_wikilinks, WikilinkMatch};
 
 pub fn note_id_from_path(vault_root: &Path, note_path: &Path) -> String {
     let relative = note_path
@@ -27,6 +27,65 @@ pub async fn index_vault(
 ) -> Result<u64, IndexerError> {
     let service = IndexerService { db, vault_root, app_handle };
     service.index_full().await
+}
+
+pub async fn resolve_and_upsert_links(
+    db: &Arc<DbHandle>,
+    source_id: &str,
+    wikilinks: &[WikilinkMatch],
+) -> Result<(), surrealdb::Error> {
+    // Delete existing links FROM this source (full re-index on every save) 
+    db.query("DELETE links_to WHERE in = $src") 
+        .bind(("src", source_id)) 
+        .await?; 
+     for wl in wikilinks { 
+        let target_id = resolve_target(db, &wl.target).await?; 
+        let (out_table, out_id) = match target_id { 
+            Some(id) => ("note", id),
+                       None => { 
+                // Upsert dangling_node 
+                let dn: Vec<serde_json::Value> = db.query(
+                    "INSERT INTO dangling_node { name: $name } ON DUPLICATE KEY IGNORE"
+                ).bind(("name", &wl.target)).await?.take(0)?;
+                let dn_id = dn.first() 
+                    .and_then(|v| v.get("id")) 
+                    .and_then(|v| v.as_str()) 
+                    .unwrap_or_default().to_string(); 
+                ("dangling_node", dn_id) 
+            } 
+        }; 
+         db.query( 
+            "RELATE $src -> links_to -> $tgt CONTENT { 
+                alias: $alias, 
+                section_anchor: $section, 
+                block_id: $block, 
+                line_number: $line 
+            }" 
+        ) 
+        .bind(("src", source_id)) 
+        .bind(("tgt", &format!("{out_table}:{out_id}"))) 
+        .bind(("alias", &wl.alias)) 
+        .bind(("section", &wl.section_anchor)) 
+        .bind(("block", &wl.block_id)) 
+        .bind(("line", wl.line_number)) 
+        .await?; 
+    } 
+    Ok(())
+
+}
+ 
+/// Case-insensitive title lookup; returns note ID if found.
+async fn resolve_target(
+    db: &Arc<DbHandle>,
+    target: &str,
+) -> Result<Option<String>, surrealdb::Error> {
+    let results: Vec<serde_json::Value> = db.query(
+        "SELECT id FROM note WHERE string::lowercase(title) = string::lowercase($t) LIMIT 1"
+    ).bind(("t", target)).await?.take(0)?; 
+    Ok(results.first() 
+        .and_then(|v| v.get("id")) 
+        .and_then(|v| v.as_str()) 
+        .map(|s| s.to_string())) 
 }
 
 impl IndexerService {
@@ -66,6 +125,11 @@ impl IndexerService {
         db::notes::upsert_tags(&self.db, &id, &parsed)
             .await
             .map_err(IndexerError::Unexpected)?;
+
+        let wikilinks = extract_wikilinks(&content);
+        resolve_and_upsert_links(&self.db, &id, &wikilinks)
+            .await
+            .map_err(|e| IndexerError::Unexpected(e.to_string()))?;
 
         Ok(())
     }

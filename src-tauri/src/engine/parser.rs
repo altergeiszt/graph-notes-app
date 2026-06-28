@@ -10,6 +10,15 @@ pub struct ParsedNote {
     pub tags_inline: Vec<String>,
     pub tags_frontmatter: Vec<String>,
 }
+#[derive(Debug, Clone)] 
+pub struct WikilinkMatch { 
+    pub target: String,          // Note title or path (before #) 
+    pub alias: Option<String>,   // Display text after | 
+    pub section_anchor: Option<String>,  // After # (heading) 
+    pub block_id: Option<String>,        // After #^ (block ref) 
+    pub is_transclusion: bool,   // True if preceded by ! 
+    pub line_number: u32, 
+} 
 
 pub fn parse_note(path: &Path, content: &str) -> ParsedNote {
     let (frontmatter_raw, body) = split_frontmatter(content);
@@ -26,6 +35,50 @@ pub fn parse_note(path: &Path, content: &str) -> ParsedNote {
         tags_frontmatter,
     }
 }
+
+pub fn extract_wikilinks(content: &str) -> Vec<WikilinkMatch> { 
+    // Match: optional ! prefix, [[, target, optional |alias or #anchor, ]] 
+    // Regex breakdown: 
+    //  (!?)       — capture optional transclusion prefix 
+    //  \[\[       — opening brackets 
+    //  ([^\]#|]+) — target name (no ], #, |) 
+    //  (#\^?([^\]|]+))? — optional #section or #^blockid 
+    //  (\|([^\]]+))? — optional |alias 
+    //  \]\]       — closing brackets 
+    let re = regex::Regex::new( 
+        r"(?m)(!?)\[\[([^\]#|]+?)(?:#(\^?)([^\]|]+?))?(?:\|([^\]]+?))?\]\]" 
+    ).unwrap(); 
+     let mut results = Vec::new(); 
+    let mut in_code_block = false; 
+     for (line_no, line) in content.lines().enumerate() { 
+        // Skip content inside fenced code blocks 
+        if line.trim_start().starts_with("```") { 
+            in_code_block = !in_code_block; 
+            continue; 
+        } 
+        if in_code_block { continue; } 
+         for cap in re.captures_iter(line) { 
+            let is_transclusion = &cap[1] == "!"; 
+            let target = cap[2].trim().to_string(); 
+            let block_prefix = cap.get(3).map(|m| m.as_str()).unwrap_or(""); 
+            let anchor_or_block = cap.get(4).map(|m| m.as_str().to_string()); 
+            let alias = cap.get(5).map(|m| m.as_str().to_string()); 
+             let (section_anchor, block_id) = if block_prefix == "^" { 
+                (None, anchor_or_block) 
+            } else { 
+                (anchor_or_block, None)             }; 
+             results.push(WikilinkMatch { 
+                target, 
+                alias, 
+                section_anchor, 
+                block_id, 
+                is_transclusion, 
+                line_number: (line_no + 1) as u32, 
+            }); 
+        } 
+    } 
+    results 
+} 
 
 fn split_frontmatter(content: &str) -> (&str, &str) {
     if !content.starts_with("---") {

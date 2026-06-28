@@ -1,12 +1,14 @@
 use std::path::PathBuf;
 use serde_json::Value as JsonValue;
 use surrealdb::types::RecordId;
+use tauri::Emitter;
 
 use crate::db;
 use crate::engine::indexer::{note_id_from_path, IndexerService};
 use crate::engine::parser;
+use crate::engine::refactor::cascade_rename;
 use crate::state::AppState;
-use crate::types::{NoteRecord, NoteSummary};
+use crate::types::{NoteRecord, NoteSummary, RefactorResult};
 
 // ─── note_list ───────────────────────────────────────────────────────────────
 
@@ -217,9 +219,34 @@ pub async fn note_rename(
         .unwrap_or(&vault_root)
         .join(format!("{safe_name}.md"));
 
+    // Derive old title from the old path stem before anything changes on disk.
+    let old_title = old_p
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or("")
+        .to_string();
+
     tokio::fs::rename(&old_p, &new_p)
         .await
         .map_err(|e| e.to_string())?;
+
+    // Spawn cascade link refactor BEFORE deleting the old DB record so the
+    // links_to graph query can still resolve edges pointing to the old note.
+    {
+        let db_c = state.db.clone();
+        let app_c = app.clone();
+        let root_c = vault_root.clone();
+        let old_t = old_title.clone();
+        let new_t = new_title.clone();
+        tokio::spawn(async move {
+            let count = cascade_rename(&db_c, &root_c, &old_t, &new_t, &app_c)
+                .await
+                .unwrap_or(0);
+            app_c
+                .emit("refactor_done", RefactorResult { updated_count: count })
+                .ok();
+        });
+    }
 
     // Remove old DB record; index_one will create the new one.
     let old_id = note_id_from_path(&vault_root, &old_p);
