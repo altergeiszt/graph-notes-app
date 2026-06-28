@@ -1,0 +1,72 @@
+    Blocking waiting for file lock on build directory
+warning: field `body` is never read
+ --> src\engine\parser.rs:9:9
+  |
+6 | pub struct ParsedNote {
+  |            ---------- field in this struct
+...
+9 |     pub body: String,
+  |         ^^^^
+  |
+  = note: `ParsedNote` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+  = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: field `is_transclusion` is never read
+  --> src\engine\parser.rs:19:9
+   |
+14 | pub struct WikilinkMatch { 
+   |            ------------- field in this struct
+...
+19 |     pub is_transclusion: bool,   // True if preceded by ! 
+   |         ^^^^^^^^^^^^^^^
+   |
+   = note: `WikilinkMatch` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+
+warning: struct `Tag` is never constructed
+  --> src\types.rs:31:12
+   |
+31 | pub struct Tag {
+   |            ^^^
+
+warning: struct `GraphNode` is never constructed
+  --> src\types.rs:38:12
+   |
+38 | pub struct GraphNode {
+   |            ^^^^^^^^^
+
+warning: struct `DanglingNode` is never constructed
+  --> src\types.rs:45:12
+   |
+45 | pub struct DanglingNode {
+   |            ^^^^^^^^^^^^
+
+warning: struct `GraphEdge` is never constructed
+  --> src\types.rs:51:12
+   |
+51 | pub struct GraphEdge {
+   |            ^^^^^^^^^
+
+warning: struct `GraphData` is never constructed
+  --> src\types.rs:57:12
+   |
+57 | pub struct GraphData {
+   |            ^^^^^^^^^
+
+warning: struct `SearchResult` is never constructed
+  --> src\types.rs:64:12
+   |
+64 | pub struct SearchResult {
+   |            ^^^^^^^^^^^^
+
+warning: struct `ProgressPayload` is never constructed
+  --> src\types.rs:77:12
+   |
+77 | pub struct ProgressPayload {
+   |            ^^^^^^^^^^^^^^^
+
+note: did not finalize incremental compilation session directory `\\?\H:\graph-notes-app\src-tauri\target\debug\incremental\graph_notes_app_lib-3u3ff4hdgbzrw\s-hjw9h2444n-11e4xd9-working`: Access is denied. (os error 5)
+  |
+  = help: the next build will not be able to reuse work from this compilation
+
+warning: `graph-notes-app` (lib) generated 9 warnings
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 19.55s
