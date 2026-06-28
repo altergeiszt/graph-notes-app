@@ -7,10 +7,12 @@ import type {
   IndexProgressPayload,
   IndexDonePayload,
 } from "./types/ipc";
+import { useTheme } from "./hooks/useTheme";
 
 type AppStatus = "idle" | "indexing" | "ready";
 
 function App() {
+  const { isDark: _isDark } = useTheme();
   const [status, setStatus] = useState<AppStatus>("idle");
   const [vault, setVault] = useState<VaultInfo | null>(null);
   const [progress, setProgress] = useState(0);
@@ -26,7 +28,7 @@ function App() {
       "vault_index_done",
       (event) => {
         setVault((prev) =>
-          prev ? { ...prev, noteCount: event.payload.noteCount } : null,
+          prev ? { ...prev, note_count: event.payload.note_count } : null,
         );
         setStatus("ready");
       },
@@ -95,7 +97,7 @@ function App() {
     <main className="flex flex-col items-center justify-center min-h-screen gap-3">
       <p className="text-sm font-medium">Vault ready</p>
       <p className="text-xs opacity-50 max-w-sm truncate">{vault?.path}</p>
-      <p className="text-xs opacity-50">{vault?.noteCount} notes indexed</p>
+      <p className="text-xs opacity-50">{vault?.note_count} notes indexed</p>
     </main>
   );
 }

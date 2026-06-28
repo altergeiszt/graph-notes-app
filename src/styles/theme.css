@@ -1,0 +1,17 @@
+:root { 
+  --color-bg:         #ffffff; 
+  --color-surface:    #f5f5f5; 
+  --color-border:     #e0e0e0;
+    --color-text:       #1a1a1a; 
+  --color-text-muted: #666666; 
+  --color-accent:     #2E6CA4; 
+  --font-mono:        'JetBrains Mono', 'Fira Code', monospace; 
+} 
+ .dark { 
+  --color-bg:         #1e1e2e; 
+  --color-surface:    #2a2a3e; 
+  --color-border:     #3a3a5c; 
+  --color-text:       #cdd6f4; 
+  --color-text-muted: #6c7086; 
+  --color-accent:     #89b4fa; 
+} 
