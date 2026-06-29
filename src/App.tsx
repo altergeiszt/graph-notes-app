@@ -44,9 +44,18 @@ function App() {
       },
     );
 
+    const unlistenError = listen<string>(
+      'vault_index_error',
+      (event) => {
+        setError(event.payload);
+        setStatus('idle');
+      },
+    );
+
     return () => {
       unlistenProgress.then((f) => f());
       unlistenDone.then((f) => f());
+      unlistenError.then((f) => f());
     };
   }, []);
 
