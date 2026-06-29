@@ -1,5 +1,5 @@
 -- ── Notes ────────────────────────────────────────────────────────────
-DEFINE TABLE IF NOT EXISTS note SCHEMAFULL;
+DEFINE TABLE OVERWRITE note SCHEMALESS;
 DEFINE FIELD IF NOT EXISTS path         ON note TYPE string;
 DEFINE FIELD IF NOT EXISTS title        ON note TYPE string;
 DEFINE FIELD IF NOT EXISTS content      ON note TYPE string;

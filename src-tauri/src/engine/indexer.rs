@@ -44,31 +44,37 @@ pub async fn resolve_and_upsert_links(
             Some(id) => ("note", id),
                        None => { 
                 // Upsert dangling_node 
+                db.query("INSERT IGNORE INTO dangling_node { name: $name }")
+                    .bind(("name", wl.target.clone())).await?;
                 let dn: Vec<serde_json::Value> = db.query(
-                    "INSERT INTO dangling_node { name: $name } ON DUPLICATE KEY IGNORE"
+                    "SELECT VALUE id FROM dangling_node WHERE name = $name LIMIT 1"
                 ).bind(("name", wl.target.clone())).await?.take(0)?;
-                let dn_id = dn.first() 
-                    .and_then(|v| v.get("id")) 
-                    .and_then(|v| v.as_str()) 
-                    .unwrap_or_default().to_string(); 
-                ("dangling_node", dn_id) 
+                let dn_id = dn.first()
+                    .and_then(|v| v.as_str())
+                    .unwrap_or_default().to_string();
+                ("dangling_node", dn_id)
             } 
         }; 
-         db.query( 
-            "RELATE $src -> links_to -> $tgt CONTENT { 
-                alias: $alias, 
-                section_anchor: $section, 
-                block_id: $block, 
-                line_number: $line 
-            }" 
-        ) 
-        .bind(("src", source_id)) 
-        .bind(("tgt", format!("{out_table}:{out_id}")))
+        let (src_table, src_key) = source_id.split_once(':').unwrap_or(("note", source_id));
+        db.query(
+            "INSERT INTO links_to {
+                in: type::thing($src_table, $src_key),
+                out: type::thing($tgt_table, $tgt_key),
+                alias: $alias,
+                section_anchor: $section,
+                block_id: $block,
+                line_number: $line
+            }"
+        )
+        .bind(("src_table", src_table.to_string()))
+        .bind(("src_key", src_key.to_string()))
+        .bind(("tgt_table", out_table.to_string()))
+        .bind(("tgt_key", out_id.clone()))
         .bind(("alias", wl.alias.clone()))
         .bind(("section", wl.section_anchor.clone()))
         .bind(("block", wl.block_id.clone()))
-        .bind(("line", wl.line_number)) 
-        .await?; 
+        .bind(("line", wl.line_number))
+        .await?;
     } 
     Ok(())
 

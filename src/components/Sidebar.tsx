@@ -9,6 +9,7 @@ interface SidebarProps {
   onCreateNote: () => void;
   onToggleTheme: () => void;
   isDark: boolean;
+  isCreating?: boolean;
 }
 
 function vaultDisplayName(path: string): string {
@@ -36,6 +37,7 @@ export function Sidebar({
   onCreateNote,
   onToggleTheme,
   isDark,
+  isCreating = false,
 }: SidebarProps) {
   const [query, setQuery] = useState('');
 
@@ -56,8 +58,9 @@ export function Sidebar({
           onClick={onCreateNote}
           title="New note"
           aria-label="New note"
+          disabled={isCreating}
         >
-          +
+          {isCreating ? '…' : '+'}
         </button>
       </div>
 

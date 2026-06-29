@@ -21,6 +21,7 @@ pub struct NoteRecord {
     pub id: String,
     pub path: String,
     pub title: String,
+    #[serde(default)]
     pub content: String,
     pub updated_at: String,
     pub created_at: String,

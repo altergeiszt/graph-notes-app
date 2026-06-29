@@ -43,33 +43,33 @@ Goal: open a vault directory, scan .md files, store notes in SurrealDB, display 
 ### 1.2 Vault Open `[BOTH]`
 
 - [x] `[FE]` "Open Vault" button calls `tauri-plugin-dialog` folder picker → passes path to backend
-- [ ] `[BE]` Implement `vault_open` Tauri command: accepts path, stores in `AppState`, triggers indexer
-- [ ] `[BE]` Implement recursive `.md` file scanner using `tokio::fs::read_dir`
-- [ ] `[BE]` Persist last-opened vault path to `tauri-plugin-store` so it reopens on launch
-- [ ] `[BE]` Emit `vault_index_progress` events (percent complete) and `vault_index_done` to frontend
+- [x] `[BE]` Implement `vault_open` Tauri command: accepts path, stores in `AppState`, triggers indexer
+- [x] `[BE]` Implement recursive `.md` file scanner using `tokio::fs::read_dir`
+- [x] `[BE]` Persist last-opened vault path to `tauri-plugin-store` so it reopens on launch
+- [x ] `[BE]` Emit `vault_index_progress` events (percent complete) and `vault_index_done` to frontend
 - [x] `[FE]` Listen for progress events and show a loading indicator
 
 ### 1.3 Frontmatter and Basic Parsing `[BE]`
 
-- [ ] Add `pulldown-cmark` to `Cargo.toml`
-- [ ] Implement frontmatter extractor: regex or manual parse for `---\n...\n---` block at file start
-- [ ] Deserialize frontmatter YAML into `serde_json::Value` using `serde_yaml`
-- [ ] Implement basic `NoteRecord` struct: `path`, `title` (from frontmatter or filename), `content`, `frontmatter`, `created_at`, `updated_at`
-- [ ] Implement upsert: `CREATE OR UPDATE note:⟨id⟩ CONTENT { ... }`
+- [x] Add `pulldown-cmark` to `Cargo.toml`
+- [x] Implement frontmatter extractor: regex or manual parse for `---\n...\n---` block at file start
+- [x] Deserialize frontmatter YAML into `serde_json::Value` using `serde_yaml`
+- [x] Implement basic `NoteRecord` struct: `path`, `title` (from frontmatter or filename), `content`, `frontmatter`, `created_at`, `updated_at`
+- [x] Implement upsert: `CREATE OR UPDATE note:⟨id⟩ CONTENT { ... }`
 
 ### 1.4 Note List `[BOTH]`
 
-- [ ] `[BE]` Implement `note_list` command: query all notes from SurrealDB, return `Vec<NoteSummary>`
-- [ ] `[FE]` Note list sidebar component: displays title and path, sorted by `updated_at`
-- [ ] `[FE]` Clicking a note calls `note_read` command and opens it in the editor stub
+- [x] `[BE]` Implement `note_list` command: query all notes from SurrealDB, return `Vec<NoteSummary>`
+- [x] `[FE]` Note list sidebar component: displays title and path, sorted by `updated_at`
+- [x] `[FE]` Clicking a note calls `note_read` command and opens it in the editor stub
 
 ### 1.5 Note CRUD `[BOTH]`
 
-- [ ] `[BE]` `note_read`: fetch note content by path; read from disk (source of truth), not DB
-- [ ] `[BE]` `note_save`: write content to disk → re-parse and update SurrealDB record
-- [ ] `[BE]` `note_create`: create `.md` file, insert SurrealDB record, return new note summary
-- [ ] `[BE]` `note_delete`: delete `.md` file, remove SurrealDB record and all outgoing edges
-- [ ] `[BE]` `note_rename`: rename `.md` file, update SurrealDB record path/title (cascade in Phase 3)
+- [x] `[BE]` `note_read`: fetch note content by path; read from disk (source of truth), not DB
+- [x] `[BE]` `note_save`: write content to disk → re-parse and update SurrealDB record
+- [x] `[BE]` `note_create`: create `.md` file, insert SurrealDB record, return new note summary
+- [x] `[BE]` `note_delete`: delete `.md` file, remove SurrealDB record and all outgoing edges
+- [x] `[BE]` `note_rename`: rename `.md` file, update SurrealDB record path/title (cascade in Phase 3)
 
 **Phase 1 exit criteria:** can open a vault, see note list, open and save notes. No wikilinks yet.
 

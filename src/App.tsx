@@ -27,6 +27,7 @@ function App() {
   const [notes, setNotes] = useState<NoteSummary[]>([]);
   const [selectedNote, setSelectedNote] = useState<NoteRecord | null>(null);
   const [paneMode, setPaneMode] = useState<PaneMode>('editor');
+  const [isCreating, setIsCreating] = useState(false);
 
   useEffect(() => {
     const unlistenProgress = listen<IndexProgressPayload>(
@@ -94,6 +95,8 @@ function App() {
   }
 
   async function handleCreateNote() {
+    if (isCreating) return;
+    setIsCreating(true);
     try {
       const summary = await invoke<NoteSummary>('note_create', {
         title: 'Untitled',
@@ -102,7 +105,11 @@ function App() {
       setNotes(refreshed);
       await handleSelectNote(summary.path);
     } catch (err) {
-      console.error('Failed to create note:', err);
+      setError(String(err));
+      const refreshed = await invoke<NoteSummary[]>('note_list').catch(() => notes);
+      setNotes(refreshed);
+    } finally {
+      setIsCreating(false);
     }
   }
 
@@ -148,6 +155,7 @@ function App() {
         onCreateNote={handleCreateNote}
         onToggleTheme={toggleTheme}
         isDark={isDark}
+        isCreating={isCreating}
       />
 
       <div className="editor-area">

@@ -83,9 +83,9 @@ async fn insert_tag(
 ) -> Result<(), String> {
     let slug = tag_name.to_lowercase().replace(' ', "-");
     db.query(
-        "LET $tag = (INSERT INTO tag { name: $name, slug: $slug }
-                     ON DUPLICATE KEY UPDATE name = $name)[0];
-         RELATE $rid->tagged_with->$tag.id CONTENT { source: $source };",
+        "INSERT IGNORE INTO tag { name: $name, slug: $slug };
+         LET $tag_id = (SELECT VALUE id FROM tag WHERE slug = $slug LIMIT 1)[0];
+         INSERT IGNORE INTO tagged_with { in: $rid, out: $tag_id, source: $source };",
     )
     .bind(("name", tag_name.to_string()))
     .bind(("slug", slug))

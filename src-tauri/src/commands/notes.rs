@@ -141,7 +141,19 @@ pub async fn note_create(
         vault_root: vault_root.clone(),
         app_handle: app,
     };
-    indexer.index_one(&path).await.map_err(|e| e.to_string())?;
+
+    // SurrealDB can emit "Transaction write conflict" under concurrent load; retry up to 5×.
+    let mut attempts = 0u32;
+    loop {
+        match indexer.index_one(&path).await {
+            Ok(()) => break,
+            Err(e) if e.to_string().contains("Transaction write conflict") && attempts < 5 => {
+                attempts += 1;
+                tokio::time::sleep(tokio::time::Duration::from_millis(50 * u64::from(attempts))).await;
+            }
+            Err(e) => return Err(e.to_string()),
+        }
+    }
 
     let id = note_id_from_path(&vault_root, &path);
     db::notes::get_summary(&state.db, &id).await
